@@ -21,6 +21,7 @@ detector.detectAllAppearance();
 
 // Unicode values for all emojis Affectiva can detect
 var emojis = [ 128528, 9786, 128515, 128524, 128527, 128521, 128535, 128539, 128540, 128542, 128545, 128563, 128561 ];
+var emojis_for_game = [ 128528, 9786, 128515, 128527, 128521, 128535, 128539, 128540, 128542, 128545, 128563, 128561 ];
 
 // Update target emoji being displayed by supplying a unicode value
 function setTargetEmoji(code) {
@@ -34,9 +35,15 @@ function toUnicode(c) {
   return ((((c.charCodeAt(0) - 0xD800) * 0x400) + (c.charCodeAt(1) - 0xDC00) + 0x10000));
 }
 
+
 // Update score being displayed
-function setScore(correct, total) {
-  $("#score").html("Score: " + correct + " / " + total);
+function setScore(correct, total, player) {
+  if (player == 1) {
+    $("#score1").html("Score P1: " + correct + " / " + total);
+  }
+  else {
+    $("#score2").html("Score P2: " + correct + " / " + total);
+  }
 }
 
 // Display log messages and tracking results
@@ -53,6 +60,7 @@ function onStart() {
     detector.start();  // start detector
   }
   log('#logs', "Start button pressed");
+  resetGame();
 }
 
 // Stop button
@@ -75,6 +83,7 @@ function onReset() {
 
   // TODO(optional): You can restart the game as well
   // <your code here>
+  resetGame();
 };
 
 // Add a callback to notify when camera access is allowed
@@ -103,6 +112,7 @@ detector.addEventListener("onInitializeSuccess", function() {
 
   // TODO(optional): Call a function to initialize the game, if needed
   // <your code here>
+  resetGame();
 });
 
 // Add a callback to receive the results from processing an image
@@ -134,6 +144,7 @@ detector.addEventListener("onImageResultsSuccess", function(faces, image, timest
 
     // TODO: Call your function to run the game (define it first!)
     // <your code here>
+    runGame(faces[0].emojis.dominantEmoji);
   }
 });
 
@@ -148,7 +159,9 @@ function drawFeaturePoints(canvas, img, face) {
   // TODO: Set the stroke and/or fill style you want for each feature point marker
   // See: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D#Fill_and_stroke_styles
   // <your code here>
-  
+
+  ctx.fillStyle = '#8a2be2';
+  ctx.strokeStyle = '#7fff00';
   // Loop over each feature point in the face
   for (var id in face.featurePoints) {
     var featurePoint = face.featurePoints[id];
@@ -156,6 +169,9 @@ function drawFeaturePoints(canvas, img, face) {
     // TODO: Draw feature point, e.g. as a circle using ctx.arc()
     // See: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/arc
     // <your code here>
+    ctx.beginPath();
+    ctx.arc(featurePoint.x, featurePoint.y, 3, 0, 2 * Math.PI);
+    ctx.stroke();
   }
 }
 
@@ -166,8 +182,9 @@ function drawEmoji(canvas, img, face) {
 
   // TODO: Set the font and style you want for the emoji
   // <your code here>
-  
+  ctx.font ="60px serif";
   // TODO: Draw it using ctx.strokeText() or fillText()
+  ctx.fillText(face.emojis.dominantEmoji,face.featurePoints[0].x,face.featurePoints[0].y);
   // See: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/fillText
   // TIP: Pick a particular feature point as an anchor so that the emoji sticks to your face
   // <your code here>
@@ -187,3 +204,97 @@ function drawEmoji(canvas, img, face) {
 // - Define a game reset function (same as init?), and call it from the onReset() function above
 
 // <your code here>
+
+//Run the mimic me game
+
+var p1Score = 0;
+var p2Score = 0;
+var currentEmoji = Math.floor(Math.random() * 12);
+var startTime = new Date();
+var lastPointGame = new Date();
+var nowTime = new Date();
+var currentPlayer = Math.floor(Math.random() * 2)+1;
+var currentTurn = 1;
+activePlayer(currentPlayer);
+
+function runGame(dominantEmoji) {
+    setTargetEmoji(emojis_for_game[currentEmoji]);
+    setScore(p1Score, currentTurn,1);
+    setScore(p2Score, currentTurn,2);
+    nowTime = new Date();
+    console.log(nowTime);
+    if ((nowTime - lastPointGame) >= 5000) {
+      lastPointGame = new Date();
+      currentEmoji = Math.floor(Math.random() * 12);
+      setTargetEmoji(emojis_for_game[currentEmoji]);
+      currentTurn +=1;
+      if (currentPlayer == 1) {
+        activePlayer(currentPlayer);
+        currentPlayer = 2;
+        activePlayer(currentPlayer);
+      }
+      else {
+        activePlayer(currentPlayer);
+        currentPlayer = 1;
+        activePlayer(currentPlayer);
+      }
+    }
+    if (currentPlayer == 1) {
+      if (toUnicode(dominantEmoji) == emojis_for_game[currentEmoji]) {
+        p1Score += 1;
+        currentEmoji = Math.floor(Math.random() * 12);
+        setScore(p1Score, currentTurn,1);
+        setTargetEmoji(emojis_for_game[currentEmoji]);
+        activePlayer(currentPlayer);
+        currentPlayer = 2;
+        activePlayer(currentPlayer);
+        currentTurn +=1;
+        lastPointGame = new Date();
+      }
+      else if ((nowTime - startTime) >= 30000) {
+        onStop();
+      }
+    }
+    else {
+      if (toUnicode(dominantEmoji) == emojis_for_game[currentEmoji]) {
+        p2Score += 1;
+        currentEmoji = Math.floor(Math.random() * 12);
+        setScore(p2Score, currentTurn,2);
+        setTargetEmoji(emojis_for_game[currentEmoji]);
+        activePlayer(currentPlayer);
+        currentPlayer = 1;
+        activePlayer(currentPlayer);
+        currentTurn +=1;
+        lastPointGame = new Date();
+      }
+      else if ((nowTime - startTime) >= 30000) {
+        onStop();
+      }
+    }
+}
+
+function resetGame() {
+    p1Score = 0;
+    p2Score = 0;
+    currentEmoji = Math.floor(Math.random() * 12);
+    startTime = new Date();
+    lastPointGame = new Date();
+    nowTime = new Date();
+    var x = document.getElementById('score'+currentPlayer);
+    x.classList.toggle("active_player");
+    currentPlayer = Math.floor(Math.random() * 2)+1;
+    currentTurn = 1;
+    activePlayer(currentPlayer);
+}
+
+function activePlayer(nplayer) {
+  if (nplayer==1) {
+    var x = document.getElementById('score1');
+    x.classList.toggle("active_player");
+  }
+  else {
+    var x = document.getElementById('score2');
+    x.classList.toggle("active_player");
+  }
+}
+
