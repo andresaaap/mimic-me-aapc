@@ -69,6 +69,7 @@ function onStop() {
   if (detector && detector.isRunning) {
     detector.removeEventListener();
     detector.stop();  // stop detector
+    killTimer();
   }
 };
 
@@ -84,6 +85,7 @@ function onReset() {
   // TODO(optional): You can restart the game as well
   // <your code here>
   resetGame();
+  restartTimer();
 };
 
 // Add a callback to notify when camera access is allowed
@@ -113,6 +115,8 @@ detector.addEventListener("onInitializeSuccess", function() {
   // TODO(optional): Call a function to initialize the game, if needed
   // <your code here>
   resetGame();
+  myVar = setInterval(function(){ 
+  myTimer() }, 1000);
 });
 
 // Add a callback to receive the results from processing an image
@@ -184,7 +188,7 @@ function drawEmoji(canvas, img, face) {
   // <your code here>
   ctx.font ="60px serif";
   // TODO: Draw it using ctx.strokeText() or fillText()
-  ctx.fillText(face.emojis.dominantEmoji,face.featurePoints[0].x,face.featurePoints[0].y);
+  ctx.fillText(face.emojis.dominantEmoji,face.featurePoints[0].x-100,face.featurePoints[0].y);
   // See: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/fillText
   // TIP: Pick a particular feature point as an anchor so that the emoji sticks to your face
   // <your code here>
@@ -206,7 +210,6 @@ function drawEmoji(canvas, img, face) {
 // <your code here>
 
 //Run the mimic me game
-
 var p1Score = 0;
 var p2Score = 0;
 var currentEmoji = Math.floor(Math.random() * 12);
@@ -214,60 +217,115 @@ var startTime = new Date();
 var lastPointGame = new Date();
 var nowTime = new Date();
 var currentPlayer = Math.floor(Math.random() * 2)+1;
-var currentTurn = 1;
+var currentTurn = 0;
+var p1Turn = 0;
+var p2Turn = 0;
 activePlayer(currentPlayer);
+var monkey = 6;
+var myVar = 0;
+var count = 5;
+var restart = false;
+function myTimer() {
+  if (restart) {
+    count = 5;
+    restart = false;
+  }
+  var d = new Date(2012,1,1, 0, 0, count, 0);
+  count += -1;
+  var t = d.toLocaleTimeString();
+  document.getElementById("timer").innerHTML = t;
+}
+function restartTimer() {
+  restart = true;
+}
+function killTimer() {
+  count = 0;
+  clearInterval(myVar);
+  restartTimer();
+}
+
 
 function runGame(dominantEmoji) {
+    if (currentTurn == 1) {
+      document.getElementById("turn").innerHTML = 'Round: '+String(currentTurn);
+    }
     setTargetEmoji(emojis_for_game[currentEmoji]);
-    setScore(p1Score, currentTurn,1);
-    setScore(p2Score, currentTurn,2);
+    setScore(p1Score, p1Turn,1);
+    setScore(p2Score, p2Turn,2);
     nowTime = new Date();
-    console.log(nowTime);
     if ((nowTime - lastPointGame) >= 5000) {
       lastPointGame = new Date();
       currentEmoji = Math.floor(Math.random() * 12);
       setTargetEmoji(emojis_for_game[currentEmoji]);
       currentTurn +=1;
+      document.getElementById("turn").innerHTML = 'Round: '+String(currentTurn);
       if (currentPlayer == 1) {
+        p1Turn +=1;
         activePlayer(currentPlayer);
         currentPlayer = 2;
         activePlayer(currentPlayer);
+        setScore(p1Score, p1Turn,1);
       }
       else {
+        p2Turn +=1;
         activePlayer(currentPlayer);
         currentPlayer = 1;
         activePlayer(currentPlayer);
+        setScore(p2Score, p2Turn,1);
       }
+      restartTimer();
     }
     if (currentPlayer == 1) {
       if (toUnicode(dominantEmoji) == emojis_for_game[currentEmoji]) {
+        p1Turn +=1;
         p1Score += 1;
         currentEmoji = Math.floor(Math.random() * 12);
-        setScore(p1Score, currentTurn,1);
+        setScore(p1Score, p1Turn,1);
         setTargetEmoji(emojis_for_game[currentEmoji]);
         activePlayer(currentPlayer);
         currentPlayer = 2;
         activePlayer(currentPlayer);
         currentTurn +=1;
+        document.getElementById("turn").innerHTML = 'Round: '+String(currentTurn);
         lastPointGame = new Date();
+        restartTimer();
       }
       else if ((nowTime - startTime) >= 30000) {
+        if (currentPlayer == 1) {
+          p1Turn +=1;
+          setScore(p1Score, p1Turn,1);
+        }
+        else {
+          p2Turn +=1;
+          setScore(p2Score, p2Turn,1);
+        }
         onStop();
       }
     }
     else {
       if (toUnicode(dominantEmoji) == emojis_for_game[currentEmoji]) {
+        p2Turn +=1;
         p2Score += 1;
         currentEmoji = Math.floor(Math.random() * 12);
-        setScore(p2Score, currentTurn,2);
+        setScore(p2Score, p2Turn,2);
         setTargetEmoji(emojis_for_game[currentEmoji]);
         activePlayer(currentPlayer);
         currentPlayer = 1;
         activePlayer(currentPlayer);
         currentTurn +=1;
+        document.getElementById("turn").innerHTML = 'Round: '+String(currentTurn);
         lastPointGame = new Date();
+        restartTimer();
       }
       else if ((nowTime - startTime) >= 30000) {
+        if (currentPlayer == 1) {
+          p1Turn +=1;
+          setScore(p1Score, p1Turn,1);
+        }
+        else {
+          p2Turn +=1;
+          setScore(p2Score, p2Turn,1);
+        }
         onStop();
       }
     }
@@ -276,6 +334,8 @@ function runGame(dominantEmoji) {
 function resetGame() {
     p1Score = 0;
     p2Score = 0;
+    p1Turn = 0;
+    p2Turn = 0;
     currentEmoji = Math.floor(Math.random() * 12);
     startTime = new Date();
     lastPointGame = new Date();
